@@ -25,7 +25,7 @@
           class="ball"
           :class="`${icon}`"
           @touchmove="childBallActionMove"
-          @touchend="childBallActionEnd(icon)"
+          @touchend="e => childBallActionEnd(e, icon)"
         ></div>
       </li>
     </ul>
@@ -49,9 +49,13 @@ export default {
     }
   },
   data() {
-    const { clientWidth, clientHeight } = document.documentElement
+    const {
+      clientWidth,
+      clientHeight
+    } = document.documentElement
 
     return {
+      rem: window.getComputedStyle(document.body,null).getPropertyValue("font-size").replace('px', ''),
       clientWidth,
       clientHeight,
       currentStatus: 'adsorption', // component status: 'adsorption' or 'wake-up'
@@ -71,18 +75,25 @@ export default {
       const e = event || window.event
       const { currentStatus } = this
 
+      e.preventDefault()
+
       if (currentStatus === 'adsorption') {
         this.touchStartPosition = { X: e.touches[0].clientX, Y: e.touches[0].clientY }
       }
     },
 
-    mainBallActionMove() {
+    mainBallActionMove(event) {
+      const e = event || window.event
+      e.preventDefault()
+
       this.mainBallMove = true
 
       if (this.currentStatus === 'wake-up') return
 
-      const e = event || window.event
-      const { touchStartPosition, mainBallPosition } = this
+      const {
+        touchStartPosition,
+        mainBallPosition
+      } = this
       const moveX = touchStartPosition.X - e.touches[0].clientX
       const moveY = touchStartPosition.Y - e.touches[0].clientY
 
@@ -97,11 +108,26 @@ export default {
     },
 
     mainBallActionEnd(event) {
-      const { clientWidth, clientHeight, mainBallPosition, currentStatus } = this
+      const e = event || window.event
+      e.preventDefault()
+
+      const {
+        rem,
+        clientWidth,
+        clientHeight,
+        mainBallPosition,
+        currentStatus
+      } = this
+
+      const currectY = mainBallPosition.Y < 6 * rem
+        ? 6 *rem
+        : mainBallPosition.Y +  6 * rem > clientHeight
+          ? clientHeight - 6 * rem
+          : mainBallPosition.Y
 
       this.mainBallPosition = {
         X: (mainBallPosition.X < clientWidth / 2) ? 0 : clientWidth,
-        Y: mainBallPosition.Y,
+        Y: currectY,
         position: (mainBallPosition.X < clientWidth / 2) ? 'left': 'right'
       }
 
@@ -113,11 +139,17 @@ export default {
       window[`${currentStatus === 'adsorption' ? 'add' : 'remove'}EventListener`]('scroll', this.scrollListener)
     },
 
-    childBallActionMove() {
+    childBallActionMove(event) {
+      const e = event || window.event
+      e.preventDefault()
+
       this.childBallMove = true
     },
 
-    childBallActionEnd(icon) {
+    childBallActionEnd(event, icon) {
+      const e = event || window.event
+      e.preventDefault()
+
       if (!this.childBallMove) {
         this.currentStatus = 'adsorption'
         this.$emit('ball-touch', icon)
@@ -130,9 +162,15 @@ export default {
     },
 
     scrollListener() {
-      const { isSroll, currentStatus } = this
+      const {
+        isSroll,
+        currentStatus
+      } = this
+
       if (isSroll) return false
+
       if (currentStatus === 'wake-up') this.currentStatus = 'adsorption'
+
       this.isSroll = true
       window.setTimeout(() => { this.isSroll = false }, 1000)
     }
@@ -144,6 +182,10 @@ export default {
 }
 </script>
 <style lang="less" scoped>
+.assistive-ball-body * {
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  -webkit-tap-highlight-color: transparent;
+}
 .assistive-ball-body {
   position: fixed;
   top: 50%;

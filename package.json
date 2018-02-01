@@ -1,7 +1,7 @@
 {
   "name": "vue-simple-assistive-ball",
   "description": "a simple vue assistive ball component for WebApp.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Ash",
   "license": "MIT",
   "scripts": {
