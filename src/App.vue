@@ -20,6 +20,7 @@ export default {
 
   methods: {
     touchEvent(icon) {
+      console.log(icon, 33333)
       // do something...
     }
   }

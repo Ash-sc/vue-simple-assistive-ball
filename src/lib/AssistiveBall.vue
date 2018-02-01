@@ -1,8 +1,18 @@
 <template>
-  <div class="assistive-ball-body" :class="`ball-status-${currentStatus}`">
+  <div
+    class="assistive-ball-body"
+    :class="`ball-status-${currentStatus} position-${mainBallPosition.position || 'left'}`"
+    :style="{
+      left: mainBallPosition.X + 'px',
+      top: mainBallPosition.Y + 'px',
+      'transition-duration': mainBallMove ? '0s' : '.1s'
+    }"
+  >
     <button
       class="main-ball"
-      @touchend="mainBallAction"
+      @touchstart="mainBallActionStart"
+      @touchmove="mainBallActionMove"
+      @touchend="mainBallActionEnd"
       :class="{'ab-close': currentStatus === 'wake-up'}"
     ></button>
     <ul class="child-ball-list">
@@ -14,7 +24,8 @@
         <div
           class="ball"
           :class="`${icon}`"
-          @touchend="touchEvent(icon)"
+          @touchmove="childBallActionMove"
+          @touchend="childBallActionEnd(icon)"
         ></div>
       </li>
     </ul>
@@ -37,20 +48,81 @@ export default {
       default: () =>([])
     }
   },
-  data: () => ({
-    currentStatus: 'adsorption'
-  }),
+  data() {
+    const { clientWidth, clientHeight } = document.documentElement
+
+    return {
+      clientWidth,
+      clientHeight,
+      currentStatus: 'adsorption', // component status: 'adsorption' or 'wake-up'
+      mainBallPosition: {
+        X: 0,
+        Y: clientHeight / 2,
+        position: 'left'
+      },
+      touchStartPosition: { X: 0, Y: 0 },
+      mainBallMove: false,
+      childBallMove: false
+    }
+  },
 
   methods: {
-    mainBallAction() {
+    mainBallActionStart(event) {
+      const e = event || window.event
       const { currentStatus } = this
-      this.currentStatus = currentStatus === 'adsorption' ? 'wake-up' : 'adsorption'
+
+      if (currentStatus === 'adsorption') {
+        this.touchStartPosition = { X: e.touches[0].clientX, Y: e.touches[0].clientY }
+      }
+    },
+
+    mainBallActionMove() {
+      this.mainBallMove = true
+
+      if (this.currentStatus === 'wake-up') return
+
+      const e = event || window.event
+      const { touchStartPosition, mainBallPosition } = this
+      const moveX = touchStartPosition.X - e.touches[0].clientX
+      const moveY = touchStartPosition.Y - e.touches[0].clientY
+
+      this.mainBallPosition = {
+        X: mainBallPosition.X - moveX,
+        Y: mainBallPosition.Y - moveY
+      }
+      this.touchStartPosition = {
+        X: e.touches[0].clientX,
+        Y: e.touches[0].clientY
+      }
+    },
+
+    mainBallActionEnd(event) {
+      const { clientWidth, clientHeight, mainBallPosition, currentStatus } = this
+
+      this.mainBallPosition = {
+        X: (mainBallPosition.X < clientWidth / 2) ? 0 : clientWidth,
+        Y: mainBallPosition.Y,
+        position: (mainBallPosition.X < clientWidth / 2) ? 'left': 'right'
+      }
+
+      if (!this.mainBallMove) {
+        this.currentStatus = currentStatus === 'adsorption' ? 'wake-up' : 'adsorption'
+      }
+      this.mainBallMove = false
+
       window[`${currentStatus === 'adsorption' ? 'add' : 'remove'}EventListener`]('scroll', this.scrollListener)
     },
 
-    touchEvent(icon) {
-      console.log(icon, 222)
-      this.currentStatus = 'adsorption'
+    childBallActionMove() {
+      this.childBallMove = true
+    },
+
+    childBallActionEnd(icon) {
+      if (!this.childBallMove) {
+        this.currentStatus = 'adsorption'
+        this.$emit('ball-touch', icon)
+      }
+      this.childBallMove = false
     },
 
     closeBall() {
@@ -74,11 +146,15 @@ export default {
 <style lang="less" scoped>
 .assistive-ball-body {
   position: fixed;
-  right: 1.1rem;
   top: 50%;
+  margin-left: 1.1rem;
   box-sizing: border-box;
   z-index: 1024;
-  transition: margin-right .1s cubic-bezier(0.24, 0.17, 0.21, 2.17);
+  transition-property: margin-left, left, top;
+
+  &.position-right {
+    margin-left: -1.1rem;
+  }
 
   .main-ball {
     position: absolute;
@@ -150,10 +226,25 @@ export default {
 .generate-child-ball(20);
 
 .generate-child-ball(@n, @i: 1) when (@i =< @n) {
-  .ball-status-wake-up {
+  .ball-status-wake-up.position-right {
 
     .child-ball:nth-child(@{i}) {
       transform: translate(0 - sin(3.14 / 180 * (18 + 36 * (@i - 1))) * 5rem, 0 - cos(3.14 / 180 * (18 + 36 * (@i - 1))) * 5rem);
+      transition-delay: @i * .1s;
+
+      .ball {
+        transform: scale(1);
+        transition-delay: @i * .1s;
+      }
+
+    }
+
+  }
+
+  .ball-status-wake-up.position-left {
+
+    .child-ball:nth-child(@{i}) {
+      transform: translate(sin(3.14 / 180 * (18 + 36 * (@i - 1))) * 5rem, 0 - cos(3.14 / 180 * (18 + 36 * (@i - 1))) * 5rem);
       transition-delay: @i * .1s;
 
       .ball {
@@ -170,7 +261,7 @@ export default {
 }
 
 .ball-status-adsorption {
-  margin-right: -.9rem;
+  margin-left: 0rem!important;
 }
 
 .assistive-ball-bg {
