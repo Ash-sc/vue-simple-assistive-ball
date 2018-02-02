@@ -14,7 +14,7 @@ export default {
 
   data() {
     return {
-      dataList: ['ab-movie', 'ab-zhihu', 'ab-weibo']
+      dataList: ['ab-movie', 'ab-zhihu', 'ab-weibo', 'ab-movie', 'ab-zhihu']
     }
   },
 
