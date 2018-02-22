@@ -67,4 +67,6 @@ export default {
   * required **Yes**
 
 
-#### 4. //todo
+#### 4. emit function
+
+use 'v-on:ball-touch="your-function"' to catch the ball touch event.
